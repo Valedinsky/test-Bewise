@@ -1,0 +1,107 @@
+---
+title: "test Bewise.ai"
+output: html_document
+date: "2022-08-30"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, message=FALSE, error=FALSE}
+library(tidyverse)
+library(dplyr)
+library(readr)
+```
+
+```{r, message=FALSE, error=FALSE}
+data <- read_csv("/cloud/project/bewise/test_data.csv")
+```
+
+## Извлекать реплики с приветствием – где менеджер поздоровался. 
+
+```{r, message=FALSE, error=FALSE}
+detect_hello <- data %>% 
+  filter(role %in% 'manager')
+  detect_hello$lowered_text = tolower(detect_hello$text)
+  detect_hello$has_hello = str_detect(detect_hello$lowered_text, 'привет|добрый день|здравствуйте') 
+
+detect_hello_true <- detect_hello[which(detect_hello$has_hello==TRUE),]
+knitr::kable(detect_hello_true$lowered_text, format="html")  
+```
+
+
+## Извлекать реплики, где менеджер представил себя. 
+
+
+```{r, message=FALSE, error=FALSE}
+detect_intro <- data %>% 
+  filter(role %in% 'manager')
+  detect_intro$lowered_text = tolower(detect_intro$text)
+  detect_intro$has_intro = str_detect(detect_intro$lowered_text, 'меня|меня зовут|моё имя|мое имя') 
+
+detect_intro_true <- detect_intro[which(detect_intro$has_intro==TRUE),]
+knitr::kable(detect_intro_true$lowered_text, format="html")
+```
+
+
+## Извлекать реплики, где менеджер попрощался.
+
+```{r, message=FALSE, error=FALSE}
+detect_bye <- data %>% 
+  filter(role %in% 'manager')
+  detect_bye$lowered_text = tolower(detect_bye$text)
+  detect_bye$has_bye = str_detect(detect_bye$lowered_text, 'до свидания|всего доброго|хорошего дня') 
+
+detect_bye_true <- detect_bye[which(detect_bye$has_bye==TRUE),]
+knitr::kable(detect_bye_true$lowered_text, format="html")  
+```
+
+## Извлекать название компании.
+
+```{r, message=FALSE, error=FALSE}
+detect_company <- data %>% 
+  filter(role %in% 'manager')
+  detect_company$lowered_text = tolower(detect_company$text)
+  detect_company$company = str_extract(detect_company$lowered_text, "(?<=компания)\\s\\w{2,20}")
+  
+detect_company <- detect_company$company[!is.na(detect_company$company)]
+knitr::kable(detect_company, format="html") 
+```
+
+## Извлекать имя менеджера.
+
+```{r, message=FALSE, error=FALSE}
+library(janeaustenr)
+library(tidytext)
+```
+
+```{r, message=FALSE, error=FALSE}
+names <- read.csv2("/cloud/project/bewise/russian_names.csv") 
+```
+
+```{r, message=FALSE, error=FALSE}
+data_manager <- data[which(data$role=="manager"),]
+
+data_manager_text <- data_manager$text
+
+data_manager_text <- tibble(data_manager_text)
+
+data_words <- data_manager_text %>%
+  unnest_tokens(word, data_manager_text) 
+
+names$nameslow <- tolower(names$Name)
+
+names_parsed <- data_words %>%
+    filter(data_words$word %in% names$nameslow)
+
+knitr::kable(names_parsed, format="html")
+```
+
+
+
+
+
+**Проблема в том, что база имен, по которой происходит фильтрация, содержит в себе несколько имен, которые повторяю обычные слова, как "вас", "тариф". Поэтому помимо нормальных имен (ангелина, дмитрий) в конечный парс попали и такие слова. База загружена отсюда: https://mydata.biz/ru/catalog/databases/names_db
+В целом, проблему можно решить, если отредактировать базу по именам (если есть на то разрешение) и просто удалить оттуда эти слова.** 
+
